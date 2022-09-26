@@ -98,6 +98,9 @@ static int *atan_lut = NULL;
 static int atan_lut_size = 131072; /* 512 KB */
 static int atan_lut_coef = 8;
 
+static int rssi = 0;
+static int rssiNo = 1;
+
 // rewrite as dynamic and thread-safe for multi demod/dongle
 #define SHARED_SIZE 6
 int16_t shared_samples[SHARED_SIZE][MAXIMUM_BUF_LENGTH];
@@ -248,6 +251,7 @@ void usage(void)
 		"\t[-l squelch_level (default: 0/off)]\n"
 		//"\t    for fm squelch is inverted\n"
 		//"\t[-o oversampling (default: 1, 4 recommended)]\n"
+		"\t[-R N  print rssi every N calculations]\n"
 		"\t[-p ppm_error (default: 0)]\n"
 		"\t[-E enable_option (default: none)]\n"
 		"\t    use multiple -E to enable multiple options\n"
@@ -845,7 +849,7 @@ void software_agc(struct demod_state *d)
 		output /= agc->gain_den;
 		abs_output = abs(output);
 		peaked = abs_output > agc->peak_target;
-		
+
 		if (peaked && aggressive && attack_step <= 1) {
 			peak_factor = fmin(5.0, (float) abs_output / agc->peak_target);
 			attack_step = (int) (pow(agc->attack_step - peak_factor, peak_factor) * (176 + 3 * peak_factor));
@@ -853,8 +857,8 @@ void software_agc(struct demod_state *d)
 
 		if (peaked) {
 			agc->gain_num -= attack_step;
-			if (aggressive) { 
-				attack_step = (int) (attack_step / 1.2); 
+			if (aggressive) {
+				attack_step = (int) (attack_step / 1.2);
 			}
 		} else {
 			agc->gain_num += agc->decay_step;
@@ -916,6 +920,19 @@ void full_demod(struct demod_state *d)
 	if (d->squelch_level && d->squelch_hits > d->conseq_squelch) {
 		d->agc->gain_num = d->agc->gain_den;
 	}
+
+	if (rssi) {
+		if (!sr)
+			sr = rms(d->lowpassed, d->lp_len, 1);
+		--rssiNo;
+		if (rssi) {
+			if  (!rssiNo) {
+				rssiNo = rssi;
+				fprintf(stderr, "RSSI %d\n", sr );
+			}
+		}
+	}
+
 	d->mode_demod(d);  /* lowpassed -> lowpassed */
 	if (d->mode_demod == &raw_demod) {
 		return;}
@@ -1432,11 +1449,11 @@ int agc_init(struct demod_state *s)
 	agc->peak_target = 1<<14;
 	agc->gain_max = 256 * agc->gain_den;
 	agc->gain_num = agc->gain_den;
-	agc->decay_step = 1; 
-	agc->attack_step = 2; 
+	agc->decay_step = 1;
+	agc->attack_step = 2;
 	if (s->agc_mode == agc_aggressive) {
-		agc->decay_step = agc->decay_step * 4; 
-		agc->attack_step = agc->attack_step * 5; 
+		agc->decay_step = agc->decay_step * 4;
+		agc->attack_step = agc->attack_step * 5;
 	}
 
 	return 0;
@@ -1513,6 +1530,9 @@ int main(int argc, char **argv)
 			break;
 		case 'l':
 			demod.squelch_level = (int)atof(optarg);
+			break;
+		case 'R':
+			rssi = (int)atof(optarg);
 			break;
 		case 's':
 			demod.rate_in = (uint32_t)atofs(optarg);
