@@ -251,7 +251,7 @@ void usage(void)
 		"\t[-l squelch_level (default: 0/off)]\n"
 		//"\t    for fm squelch is inverted\n"
 		//"\t[-o oversampling (default: 1, 4 recommended)]\n"
-		"\t[-R N  print rssi every N calculations]\n"
+		"\t[-R N print rssi every N calculations]\n"
 		"\t[-p ppm_error (default: 0)]\n"
 		"\t[-E enable_option (default: none)]\n"
 		"\t    use multiple -E to enable multiple options\n"
@@ -1508,7 +1508,7 @@ int main(int argc, char **argv)
 	output_init(&output);
 	controller_init(&controller);
 
-	while ((opt = getopt(argc, argv, "d:f:g:s:b:l:o:t:r:p:E:F:A:M:h")) != -1) {
+	while ((opt = getopt(argc, argv, "d:f:g:s:b:l:R:o:t:r:p:E:F:A:M:h")) != -1) {
 		switch (opt) {
 		case 'd':
 			dongle.dev_index = verbose_device_search(optarg);
