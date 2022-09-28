@@ -922,18 +922,15 @@ void full_demod(struct demod_state *d)
 	}
 
 	if (rssi) {
-		if (!sr)
-			sr = rms(d->lowpassed, d->lp_len, 1);
+		sr = rms(d->lowpassed, d->lp_len, 1);
 		--rssiNo;
-		if (rssi) {
-			if  (!rssiNo) {
-				rssiNo = rssi;
-				//fprintf(stderr, "RSSI %d\n", sr );
-				FILE *f = fdopen(3, "w");
-        if ( ! f ) fprintf(stderr,"fdopen(fd_info)");
-        fprintf(f, "\nRSSI %d", sr );
-        fflush(f);
-			}
+		if  (!rssiNo) {
+			rssiNo = rssi;
+			//fprintf(stderr, "RSSI %d\n", sr );
+			FILE *f = fdopen(3, "w");
+			if ( ! f ) fprintf(stderr,"fdopen(fd_info)");
+			fprintf(f, "\nRSSI %d", sr );
+			fflush(f);
 		}
 	}
 
