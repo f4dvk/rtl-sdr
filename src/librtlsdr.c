@@ -126,6 +126,8 @@ struct rtlsdr_dev {
 	unsigned int xfer_errors;
 	int tuner_initialized;
 	int i2c_repeater_on;
+	char manufact[256];
+	char product[256];
 };
 
 void rtlsdr_set_gpio_bit(rtlsdr_dev_t *dev, uint8_t gpio, int val);
@@ -1460,6 +1462,15 @@ int rtlsdr_get_index_by_serial(const char *serial)
 	return -3;
 }
 
+/* Returns true if the manufact_check and product_check strings match what is in the dongles EEPROM */
+int rtlsdr_check_dongle_model(void *dev, char *manufact_check, char *product_check)
+{
+	if ((strcmp(((rtlsdr_dev_t *)dev)->manufact, manufact_check) == 0&& strcmp(((rtlsdr_dev_t *)dev)->product, product_check) == 0))
+		return 1;
+
+	return 0;
+}
+
 int rtlsdr_open(rtlsdr_dev_t **out_dev, uint32_t index)
 {
 	int r;
@@ -1554,6 +1565,9 @@ int rtlsdr_open(rtlsdr_dev_t **out_dev, uint32_t index)
 	rtlsdr_init_baseband(dev);
 	dev->dev_lost = 0;
 
+	/* Get device manufacturer and product id */
+	r = rtlsdr_get_usb_strings(dev, dev->manufact, dev->product, NULL);
+
 	/* Probe tuners */
 	rtlsdr_set_i2c_repeater(dev, 1);
 
@@ -1581,6 +1595,10 @@ int rtlsdr_open(rtlsdr_dev_t **out_dev, uint32_t index)
 	reg = rtlsdr_i2c_read_reg(dev, R828D_I2C_ADDR, R82XX_CHECK_ADDR);
 	if (reg == R82XX_CHECK_VAL) {
 		fprintf(stderr, "Found Rafael Micro R828D tuner\n");
+
+		if (rtlsdr_check_dongle_model(dev, "RTLSDRBlog", "Blog V4"))
+			fprintf(stderr, "RTL-SDR Blog V4 Detected\n");
+
 		dev->tuner_type = RTLSDR_TUNER_R828D;
 		goto found;
 	}
@@ -1614,7 +1632,10 @@ found:
 
 	switch (dev->tuner_type) {
 	case RTLSDR_TUNER_R828D:
-		dev->tun_xtal = R828D_XTAL_FREQ;
+		/* If NOT an RTL-SDR Blog V4, set typical R828D 16 MHz freq. Otherwise, keep at 28.8 MHz. */
+		if (!(rtlsdr_check_dongle_model(dev, "RTLSDRBlog", "Blog V4"))) {
+			dev->tun_xtal = R828D_XTAL_FREQ;
+		}
 	case RTLSDR_TUNER_R820T:
 		/* disable Zero-IF mode */
 		rtlsdr_demod_write_reg(dev, 1, 0xb1, 0x1a, 1);
