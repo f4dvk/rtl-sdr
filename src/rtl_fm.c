@@ -1614,8 +1614,8 @@ int main(int argc, char **argv)
 			if (strcmp("wbfm",  optarg) == 0) {
 				controller.wb_mode = 1;
 				demod.mode_demod = &fm_demod;
-				demod.rate_in = 170000;
-				demod.rate_out = 170000;
+				demod.rate_in = 200000;
+				demod.rate_out = 200000;
 				demod.rate_out2 = 32000;
 				output.rate = 32000;
 				demod.custom_atan = 1;
